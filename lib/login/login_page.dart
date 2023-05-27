@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pin_input_text_field/pin_input_text_field.dart';
+import 'package:untitled/controllers/all_apis.dart';
 import 'package:untitled/home/home_page.dart';
 import 'package:untitled/on_boarding/user_on_boarding.dart';
+import 'package:untitled/ui_popup/popup_snackbar.dart';
 import 'package:untitled/utils/custom_components.dart';
 import 'package:http/http.dart' as http;
 
@@ -37,13 +39,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-class LoginInformation {
-  String? countryCode;
-  String? phoneNumber;
-  String? token;
-  String? name;
-}
-
 class LoginComponent extends StatefulWidget {
   const LoginComponent({Key? key}) : super(key: key);
 
@@ -58,16 +53,16 @@ class _LoginComponentState extends State<LoginComponent> {
 
   _loginButtonClick() {
     bool validatedPhoneNumber = _formKey.currentState?.validate() ?? false;
-    if (!validatedPhoneNumber) {
-      LoginInformation _loginInformation = LoginInformation();
-      _loginInformation
+    if (validatedPhoneNumber) {
+      LoginInformation loginInformation = LoginInformation();
+      loginInformation
         ..countryCode = countryCode
         ..phoneNumber = phoneNumber.value.text;
       Navigator.push(
           context,
           MaterialPageRoute(
               builder: (builder) => OTPPage(
-                    loginInformation: _loginInformation,
+                    loginInformation: loginInformation,
                   )));
     }
   }
@@ -94,10 +89,15 @@ class _LoginComponentState extends State<LoginComponent> {
                     flex: 1,
                     child: TextFormField(
                       controller: phoneNumber,
-                      maxLength: 6,
+                      maxLength: 10,
+                      keyboardType: TextInputType.phone,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter some text';
+                        RegExp numberPattern = RegExp(r"^[0-9]+$");
+                        if (value == null ||
+                            value.isEmpty ||
+                            value.length != 10 ||
+                            !numberPattern.hasMatch(value)) {
+                          return 'Please enter your 10 digit phone number';
                         }
                         return null;
                       },
@@ -129,32 +129,52 @@ class _OTPPageState extends State<OTPPage> {
   String fullNumber = '';
   bool disableVerifyButton = true;
   TextEditingController pinController = TextEditingController();
+  late ApiResponse verifiedInformation;
 
   @override
   void initState() {
     fullNumber =
         '${widget.loginInformation.countryCode}${widget.loginInformation.phoneNumber}';
+    _sendOTP();
     super.initState();
   }
 
-  _verifyOTP() {
-    if (!disableVerifyButton) {
-      //  TODO API call to check if OTP is correct
-      Future<http.Response> getOTP() {
-        return http
-            .get(Uri.parse(' https://test-otp-api.7474224.xyz/sendotp.php'));
+  _verifyOTP() async {
+    widget.loginInformation..otp = pinController.value.text;
+    ApiResponse response = await PasteApi().verifyOTP(
+        loginInformation: widget.loginInformation,
+        apiResponse: verifiedInformation);
+    response = ApiResponse(status: true, profileExists: false, jwt: 'jwt1234');
+    if (response.status) {
+      if (response.profileExists ?? false) {
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (builder) => const HomePage()),
+            (route) => false);
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+                builder: (builder) => UserOnboarding(
+                      loginInformation: widget.loginInformation,
+                  apiResponse: response,
+                    )),
+            (route) => false);
       }
-
-      //TODO check if new User
-      Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (builder) => UserOnboarding()),
-          (route) => false);
-      return;
-      //TODO check if old user
-      Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (builder) => HomePage()),
-          (route) => false);
+    } else {
+      UiPopup.showSnackBar(
+          context: context,
+          message: response.response ?? '',
+          backgroundColor: Colors.red);
     }
+  }
+
+  _sendOTP() async {
+    verifiedInformation =
+        await PasteApi().sendOTP(inputInformation: widget.loginInformation);
+    UiPopup.showSnackBar(
+        context: context,
+        message: verifiedInformation.response ?? 'No response form server.',
+        backgroundColor:
+            verifiedInformation.status ? Colors.green : Colors.red);
   }
 
   @override
@@ -167,8 +187,8 @@ class _OTPPageState extends State<OTPPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CircleAvatar(),
-              Text("Enter OTP"),
+              const CircleAvatar(),
+              const Text("Enter OTP"),
               Text("OTP has been sent to $fullNumber"),
               PinInputTextField(
                 controller: pinController,
@@ -211,7 +231,7 @@ class _OTPPageState extends State<OTPPage> {
                   onPressed: () {
                     _verifyOTP();
                   },
-                  child: Text("Verify"))
+                  child: const Text("Verify"))
             ],
           ),
         ),
