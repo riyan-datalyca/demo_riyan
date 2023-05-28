@@ -4,8 +4,7 @@ import 'package:untitled/controllers/all_apis.dart';
 import 'package:untitled/home/home_page.dart';
 import 'package:untitled/on_boarding/user_on_boarding.dart';
 import 'package:untitled/ui_popup/popup_snackbar.dart';
-import 'package:untitled/utils/custom_components.dart';
-import 'package:http/http.dart' as http;
+import 'package:untitled/utils/design_one.dart';
 
 enum OTPResponse { success, error }
 
@@ -19,20 +18,17 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: ElevatedContainerCustom(
-          child: Wrap(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.grey,
-              ),
-              SizedBox(
-                width: 5001,
-                child: LoginComponent(),
-              )
-            ],
-          ),
+    return Scaffold(
+      body: Container(
+        padding: const EdgeInsets.only(top: 64.0),
+        decoration: DesignOne.gradientBackground(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
+          children: <Widget>[
+            DesignOne().circularLogo(),
+            const LoginComponent()
+          ],
         ),
       ),
     );
@@ -59,67 +55,85 @@ class _LoginComponentState extends State<LoginComponent> {
         ..countryCode = countryCode
         ..phoneNumber = phoneNumber.value.text;
       Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (builder) => OTPPage(
-                    loginInformation: loginInformation,
-                  )));
+        context,
+        MaterialPageRoute(
+          builder: (builder) => OTPPage(
+            loginInformation: loginInformation,
+          ),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  IntrinsicWidth(
-                    child: TextFormField(
-                      readOnly: true,
-                      controller: TextEditingController(text: countryCode),
-                    ),
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: DesignOne.inputFieldDecoration(),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IntrinsicWidth(
+                  child: TextFormField(
+                    readOnly: true,
+                    controller: TextEditingController(text: countryCode),
+                    decoration: DesignOne.inputDecoration,
                   ),
-                  Expanded(
-                    flex: 1,
-                    child: TextFormField(
-                      controller: phoneNumber,
-                      maxLength: 10,
-                      keyboardType: TextInputType.phone,
-                      validator: (value) {
-                        RegExp numberPattern = RegExp(r"^[0-9]+$");
-                        if (value == null ||
-                            value.isEmpty ||
-                            value.length != 10 ||
-                            !numberPattern.hasMatch(value)) {
-                          return 'Please enter your 10 digit phone number';
-                        }
-                        return null;
-                      },
+                ),
+                Expanded(
+                  flex: 1,
+                  child: TextFormField(
+                    controller: phoneNumber,
+                    decoration: DesignOne.inputDecoration.copyWith(
+                      hintText: "Enter Phone Number",
+                      counterText: "",
                     ),
+                    maxLength: 10,
+                    keyboardType: TextInputType.phone,
+                    validator: (value) {
+                      RegExp numberPattern = RegExp(r"^[0-9]+$");
+                      if (value == null ||
+                          value.isEmpty ||
+                          value.length != 10 ||
+                          !numberPattern.hasMatch(value)) {
+                        return 'Please enter your 10 digit phone number';
+                      }
+                      return null;
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            ElevatedButton(
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor:
+                      MaterialStateProperty.all(Colors.transparent),
+                ),
                 onPressed: () {
                   _loginButtonClick();
                 },
-                child: const Text("Continue"))
-          ],
-        ));
+                child: const Text("Continue")),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class OTPPage extends StatefulWidget {
   final LoginInformation loginInformation;
 
-  OTPPage({Key? key, required this.loginInformation}) : super(key: key);
+  const OTPPage({Key? key, required this.loginInformation}) : super(key: key);
 
   @override
   State<OTPPage> createState() => _OTPPageState();
@@ -140,12 +154,12 @@ class _OTPPageState extends State<OTPPage> {
   }
 
   _verifyOTP() async {
-    widget.loginInformation..otp = pinController.value.text;
+    widget.loginInformation.otp = pinController.value.text;
     ApiResponse response = await PasteApi().verifyOTP(
         loginInformation: widget.loginInformation,
         apiResponse: verifiedInformation);
     response = ApiResponse(status: true, profileExists: false, jwt: 'jwt1234');
-    if (response.status) {
+    if (response.status && context.mounted) {
       if (response.profileExists ?? false) {
         Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (builder) => const HomePage()),
@@ -155,7 +169,7 @@ class _OTPPageState extends State<OTPPage> {
             MaterialPageRoute(
                 builder: (builder) => UserOnboarding(
                       loginInformation: widget.loginInformation,
-                  apiResponse: response,
+                      apiResponse: response,
                     )),
             (route) => false);
       }
@@ -170,41 +184,34 @@ class _OTPPageState extends State<OTPPage> {
   _sendOTP() async {
     verifiedInformation =
         await PasteApi().sendOTP(inputInformation: widget.loginInformation);
-    UiPopup.showSnackBar(
-        context: context,
-        message: verifiedInformation.response ?? 'No response form server.',
-        backgroundColor:
-            verifiedInformation.status ? Colors.green : Colors.red);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ElevatedContainerCustom(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const CircleAvatar(),
-              const Text("Enter OTP"),
-              Text("OTP has been sent to $fullNumber"),
-              PinInputTextField(
+      body: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: DesignOne.gradientBackground(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DesignOne().circularLogo(),
+            Text(
+              "Enter OTP",
+              style: DesignOne.boldMont,
+            ),
+            Text(
+              "OTP has been sent to $fullNumber",
+              style: DesignOne.boldMont,
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: PinInputTextField(
                 controller: pinController,
                 pinLength: 6,
-                decoration: UnderlineDecoration(
-                  textStyle: Theme.of(context).textTheme.bodyText1!.copyWith(
-                        color: Colors.grey[400],
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                  bgColorBuilder: PinListenColorBuilder(
-                      Theme.of(context).scaffoldBackgroundColor,
-                      Theme.of(context).scaffoldBackgroundColor),
-                  colorBuilder:
-                      PinListenColorBuilder(Colors.black, Colors.black),
-                ),
+                decoration: DesignOne.customPinDecoration(context),
                 textInputAction: TextInputAction.go,
                 enabled: true,
                 autoFocus: true,
@@ -220,20 +227,20 @@ class _OTPPageState extends State<OTPPage> {
                 cursor: Cursor(enabled: true, color: Colors.black, width: 1.0),
                 enableInteractiveSelection: true,
               ),
-              ElevatedButton(
-                  style: ButtonStyle(backgroundColor:
-                      MaterialStateProperty.resolveWith((states) {
-                    if (disableVerifyButton) {
-                      return Colors.grey;
-                    }
-                    return null;
-                  })),
-                  onPressed: () {
-                    _verifyOTP();
-                  },
-                  child: const Text("Verify"))
-            ],
-          ),
+            ),
+            ElevatedButton(
+                style: ButtonStyle(backgroundColor:
+                    MaterialStateProperty.resolveWith((states) {
+                  if (disableVerifyButton) {
+                    return Colors.grey;
+                  }
+                  return null;
+                })),
+                onPressed: () {
+                  _verifyOTP();
+                },
+                child: const Text("Verify"))
+          ],
         ),
       ),
     );
