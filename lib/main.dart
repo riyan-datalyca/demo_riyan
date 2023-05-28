@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      home: SafeArea(child: LoginPage()),
+      home: const SafeArea(child: LoginPage()),
     );
   }
 }

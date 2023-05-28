@@ -8,11 +8,6 @@ class LoginInformation {
   late String otp;
   late String userName;
   late String email;
-
-// setCountryCode countryCode set =>
-/*TODO : Setter and getter so the member variables will be set once and can
-    fetch data anywhere
- */
 }
 
 class ApiResponse {
@@ -61,7 +56,6 @@ class PasteApi {
       {required ApiResponse apiResponse,
       required LoginInformation loginInformation}) async {
     var url = Uri.https('test-otp-api.7474224.xyz', 'profilesubmit.php');
-    //TODO : fetch token from apiResponse
     var response = await http.post(url, body: {
       "name": loginInformation.userName ?? '',
       "email": loginInformation.email ?? ''

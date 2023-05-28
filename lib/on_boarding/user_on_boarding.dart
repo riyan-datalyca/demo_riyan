@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:untitled/controllers/all_apis.dart';
 import 'package:untitled/home/home_page.dart';
-import 'package:untitled/ui_popup/popup_snackbar.dart';
-import 'package:untitled/utils/custom_components.dart';
+import 'package:untitled/utils/design_one.dart';
 
 class UserOnboarding extends StatefulWidget {
   final LoginInformation loginInformation;
@@ -22,16 +21,12 @@ class _UserOnboardingState extends State<UserOnboarding> {
   TextEditingController emailController = TextEditingController();
 
   _submitUserData() async {
-    widget.loginInformation..userName = userNameController.value.text;
-    widget.loginInformation..email = emailController.value.text;
+    widget.loginInformation.userName = userNameController.value.text;
+    widget.loginInformation.email = emailController.value.text;
     ApiResponse apiResponse = await PasteApi().addUser(
         apiResponse: widget.apiResponse,
         loginInformation: widget.loginInformation);
-    UiPopup.showSnackBar(
-        context: context,
-        message: apiResponse.response ?? '',
-        backgroundColor: apiResponse.status ? Colors.green : Colors.red);
-    if (apiResponse.status) {
+    if (apiResponse.status && context.mounted) {
       Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (builder) => const HomePage()),
@@ -42,26 +37,37 @@ class _UserOnboardingState extends State<UserOnboarding> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ElevatedContainerCustom(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                "Welcome",
-                textScaleFactor:
-                    MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.5),
-                style: const TextStyle(fontSize: 36),
-              ),
-              const Text(
-                  "Looks like you are new here. Tell us a bit about yourself."),
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
+      body: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: DesignOne.gradientBackground(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              "Welcome",
+              textScaleFactor:
+                  MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.5),
+              style: DesignOne.boldMont
+                  .copyWith(fontWeight: FontWeight.bold, fontSize: 36),
+            ),
+            Text(
+              "Looks like you are new here. Tell us a bit about yourself.",
+              style: DesignOne.boldMont,
+            ),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: DesignOne.inputFieldDecoration(),
+                    child: TextFormField(
                         controller: userNameController,
+                        decoration: DesignOne.inputDecoration
+                            .copyWith(hintText: 'Name'),
                         validator: (String? value) {
                           RegExp emailPattern = RegExp(r"^[a-zA-Z]+$");
                           if (value == null ||
@@ -71,8 +77,15 @@ class _UserOnboardingState extends State<UserOnboarding> {
                           }
                           return null;
                         }),
-                    TextFormField(
+                  ),
+                  Container(
+                    margin: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: DesignOne.inputFieldDecoration(),
+                    child: TextFormField(
                         controller: emailController,
+                        decoration: DesignOne.inputDecoration
+                            .copyWith(hintText: 'Email'),
                         validator: (String? value) {
                           RegExp emailPattern =
                               RegExp(r"^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-z]+$");
@@ -82,23 +95,20 @@ class _UserOnboardingState extends State<UserOnboarding> {
                             return 'Please Enter valid email address';
                           }
                           return null;
-                        })
-                  ],
-                ),
+                        }),
+                  )
+                ],
               ),
-              ElevatedButton(
-                  onPressed: () {
-                    bool? validated = _formKey.currentState?.validate();
-                    if(validated != null && validated){
-                      _submitUserData();
-                    }else{
-
-                    }
-
-                  },
-                  child: const Text("Submit")),
-            ],
-          ),
+            ),
+            ElevatedButton(
+                onPressed: () {
+                  bool? validated = _formKey.currentState?.validate();
+                  if (validated != null && validated) {
+                    _submitUserData();
+                  } else {}
+                },
+                child: const Text("Submit")),
+          ],
         ),
       ),
     );
